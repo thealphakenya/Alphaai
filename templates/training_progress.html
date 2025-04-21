@@ -1,0 +1,260 @@
+<div class="training-progress-container">
+    <h2 class="training-title">Model Training Progress</h2>
+    
+    <div class="training-stage">
+        <span id="current-stage">Idle</span>
+    </div>
+    
+    <div class="progress-bars">
+        <div class="progress-item">
+            <div class="progress-label">
+                <span>Training Model</span>
+                <span id="training-model-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="training-model-bar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="progress-item">
+            <div class="progress-label">
+                <span>Testing Model</span>
+                <span id="testing-model-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="testing-model-bar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="progress-item">
+            <div class="progress-label">
+                <span>Fixing Model</span>
+                <span id="fixing-model-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="fixing-model-bar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="progress-item">
+            <div class="progress-label">
+                <span>Retesting Model</span>
+                <span id="retesting-model-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="retesting-model-bar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="progress-item">
+            <div class="progress-label">
+                <span>Getting Model Ready</span>
+                <span id="getting-ready-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="getting-ready-bar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <div class="progress-item">
+            <div class="progress-label">
+                <span>Continuous Learning</span>
+                <span id="continuous-learning-percent">0%</span>
+            </div>
+            <div class="progress-bar">
+                <div id="continuous-learning-bar" class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="model-status">
+        <span id="model-status-text">Model is not in use</span>
+    </div>
+    
+    <div class="training-actions">
+        <button id="start-training-btn" class="action-button">Start Training</button>
+        <button id="start-continuous-learning-btn" class="action-button" disabled>Start Continuous Learning</button>
+    </div>
+</div>
+
+<script>
+    // Training progress monitoring
+    let trainingInterval;
+    
+    function updateTrainingProgress() {
+        fetch('/api/training/progress')
+            .then(response => response.json())
+            .then(data => {
+                // Update stage
+                document.getElementById('current-stage').textContent = 
+                    data.stage.charAt(0).toUpperCase() + data.stage.slice(1).replace(/_/g, ' ');
+                
+                // Update progress bars
+                document.getElementById('training-model-percent').textContent = `${data.progress.training_model}%`;
+                document.getElementById('training-model-bar').style.width = `${data.progress.training_model}%`;
+                
+                document.getElementById('testing-model-percent').textContent = `${data.progress.testing_model}%`;
+                document.getElementById('testing-model-bar').style.width = `${data.progress.testing_model}%`;
+                
+                document.getElementById('fixing-model-percent').textContent = `${data.progress.fixing_model}%`;
+                document.getElementById('fixing-model-bar').style.width = `${data.progress.fixing_model}%`;
+                
+                document.getElementById('retesting-model-percent').textContent = `${data.progress.retesting_model}%`;
+                document.getElementById('retesting-model-bar').style.width = `${data.progress.retesting_model}%`;
+                
+                document.getElementById('getting-ready-percent').textContent = `${data.progress.getting_ready}%`;
+                document.getElementById('getting-ready-bar').style.width = `${data.progress.getting_ready}%`;
+                
+                document.getElementById('continuous-learning-percent').textContent = `${data.progress.continuous_learning}%`;
+                document.getElementById('continuous-learning-bar').style.width = `${data.progress.continuous_learning}%`;
+                
+                // Update model status
+                if (data.progress.in_use) {
+                    document.getElementById('model-status-text').textContent = 'Model is in use';
+                    document.getElementById('start-continuous-learning-btn').disabled = false;
+                } else {
+                    document.getElementById('model-status-text').textContent = 'Model is not in use';
+                    document.getElementById('start-continuous-learning-btn').disabled = true;
+                }
+                
+                // Disable start training button if training is in progress
+                document.getElementById('start-training-btn').disabled = data.is_training;
+            })
+            .catch(error => console.error('Error fetching training progress:', error));
+    }
+    
+    // Start monitoring training progress
+    trainingInterval = setInterval(updateTrainingProgress, 1000);
+    
+    // Start training button
+    document.getElementById('start-training-btn').addEventListener('click', function() {
+        fetch('/api/training/start', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model_name: 'alpha_ai_model',
+                dataset_path: 'data/training',
+                params: {
+                    epochs: 20,
+                    batch_size: 32,
+                    learning_rate: 0.001
+                }
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Training started:', data);
+            this.disabled = true;
+        })
+        .catch(error => console.error('Error starting training:', error));
+    });
+    
+    // Start continuous learning button
+    document.getElementById('start-continuous-learning-btn').addEventListener('click', function() {
+        fetch('/api/training/continuous-learning', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                model_name: 'alpha_ai_model'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Continuous learning started:', data);
+        })
+        .catch(error => console.error('Error starting continuous learning:', error));
+    });
+</script>
+
+<style>
+    .training-progress-container {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .training-title {
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: #333;
+    }
+    
+    .training-stage {
+        background-color: #e9ecef;
+        padding: 10px;
+        border-radius: 4px;
+        margin-bottom: 15px;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .progress-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .progress-item {
+        margin-bottom: 10px;
+    }
+    
+    .progress-label {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 5px;
+        font-size: 14px;
+    }
+    
+    .progress-bar {
+        height: 10px;
+        background-color: #e9ecef;
+        border-radius: 5px;
+        overflow: hidden;
+    }
+    
+    .progress-bar-fill {
+        height: 100%;
+        background-color: #007bff;
+        transition: width 0.3s ease;
+    }
+    
+    .model-status {
+        margin-top: 15px;
+        padding: 10px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    .training-actions {
+        margin-top: 15px;
+        display: flex;
+        gap: 10px;
+    }
+    
+    .action-button {
+        padding: 8px 16px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .action-button:hover {
+        background-color: #0069d9;
+    }
+    
+    .action-button:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+    }
+</style>

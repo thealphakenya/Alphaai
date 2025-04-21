@@ -1,0 +1,1169 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="workspace-container" data-workspace-id="{{ workspace.id }}">
+    <div class="workspace-header">
+        <div class="workspace-title">
+            <h1>{{ workspace.name }}</h1>
+            <span class="workspace-template-badge">{{ workspace.template }}</span>
+        </div>
+        <div class="workspace-actions">
+            <button id="change-template-btn" class="workspace-action-btn">
+                <i class="fas fa-exchange-alt"></i> Change Template
+            </button>
+            <button id="save-workspace-btn" class="workspace-action-btn">
+                <i class="fas fa-save"></i> Save
+            </button>
+            <button id="share-workspace-btn" class="workspace-action-btn">
+                <i class="fas fa-share-alt"></i> Share
+            </button>
+        </div>
+    </div>
+    
+    <div class="workspace-content" data-layout="{{ workspace.layout }}">
+        {% for panel in workspace.panels %}
+        <div class="workspace-panel" data-panel-id="{{ panel.id }}" data-panel-type="{{ panel.type }}" data-panel-position="{{ panel.position }}">
+            <div class="panel-header">
+                <h3>{{ panel.id|title }}</h3>
+                <div class="panel-controls">
+                    <button class="panel-control-btn panel-minimize-btn">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                    <button class="panel-control-btn panel-maximize-btn">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                    <button class="panel-control-btn panel-close-btn">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="panel-content">
+                {% if panel.type == 'code_editor' %}
+                <div class="code-editor" id="code-editor-{{ panel.id }}"></div>
+                {% elif panel.type == 'terminal' %}
+                <div class="terminal" id="terminal-{{ panel.id }}"></div>
+                {% elif panel.type == 'file_explorer' %}
+                <div class="file-explorer" id="file-explorer-{{ panel.id }}"></div>
+                {% elif panel.type == 'chat' %}
+                <div class="chat-interface" id="chat-{{ panel.id }}">
+                    <div class="chat-messages" id="chat-messages-{{ panel.id }}"></div>
+                    <div class="chat-input-container">
+                        <textarea id="chat-input-{{ panel.id }}" class="chat-input" placeholder="Type your message..."></textarea>
+                        <button id="chat-send-{{ panel.id }}" class="chat-send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                {% elif panel.type == 'media_player' %}
+                <div class="media-player-panel" id="media-player-{{ panel.id }}">
+                    <div class="media-library">
+                        <div class="media-tabs">
+                            <button class="media-tab active" data-media-type="videos">Videos</button>
+                            <button class="media-tab" data-media-type="audio">Audio</button>
+                            <button class="media-tab" data-media-type="images">Images</button>
+                            <button class="media-tab" data-media-type="documents">Documents</button>
+                        </div>
+                        <div class="media-search">
+                            <input type="text" placeholder="Search media...">
+                            <button><i class="fas fa-search"></i></button>
+                        </div>
+                        <div class="media-list" id="media-list-{{ panel.id }}"></div>
+                    </div>
+                </div>
+                {% elif panel.type == 'canvas' %}
+                <div class="canvas-container" id="canvas-{{ panel.id }}">
+                    <canvas id="drawing-canvas-{{ panel.id }}"></canvas>
+                    <div class="canvas-tools">
+                        <button class="canvas-tool" data-tool="brush"><i class="fas fa-paint-brush"></i></button>
+                        <button class="canvas-tool" data-tool="eraser"><i class="fas fa-eraser"></i></button>
+                        <button class="canvas-tool" data-tool="text"><i class="fas fa-font"></i></button>
+                        <button class="canvas-tool" data-tool="shape"><i class="fas fa-shapes"></i></button>
+                        <button class="canvas-tool" data-tool="image"><i class="fas fa-image"></i></button>
+                        <div class="color-picker">
+                            <input type="color" id="color-picker-{{ panel.id }}" value="#000000">
+                        </div>
+                    </div>
+                </div>
+                {% elif panel.type == 'timeline' %}
+                <div class="timeline-container" id="timeline-{{ panel.id }}">
+                    <div class="timeline-controls">
+                        <button class="timeline-control" data-action="play"><i class="fas fa-play"></i></button>
+                        <button class="timeline-control" data-action="pause"><i class="fas fa-pause"></i></button>
+                        <button class="timeline-control" data-action="stop"><i class="fas fa-stop"></i></button>
+                        <div class="timeline-time">00:00:00</div>
+                    </div>
+                    <div class="timeline-tracks" id="timeline-tracks-{{ panel.id }}"></div>
+                </div>
+                {% elif panel.type == 'text_editor' %}
+                <div class="text-editor" id="text-editor-{{ panel.id }}"></div>
+                {% else %}
+                <div class="generic-panel">
+                    <p>{{ panel.type|title }} panel</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div class="workspace-footer">
+        <div class="workspace-status">
+            <span id="workspace-status-message">Ready</span>
+        </div>
+        <div class="workspace-tools">
+            {% for tool in workspace.tools %}
+            <button class="workspace-tool-btn" data-tool="{{ tool }}">
+                <i class="fas fa-{{ tool|replace('_', '-') }}"></i>
+                <span>{{ tool|title|replace('_', ' ') }}</span>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Template Selection Modal -->
+<div id="template-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Select Workspace Template</h2>
+            <button class="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="template-grid" id="template-grid">
+                <!-- Templates will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xterm/3.14.5/xterm.min.js"></script>
+<script>
+    // Initialize workspace
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize code editors
+        document.querySelectorAll('.code-editor').forEach(function(editorElement) {
+            const editor = ace.edit(editorElement.id);
+            editor.setTheme("ace/theme/monokai");
+            editor.session.setMode("ace/mode/javascript");
+            editor.setOptions({
+                fontSize: "14px",
+                showPrintMargin: false
+            });
+        });
+        
+        // Initialize terminals
+        document.querySelectorAll('.terminal').forEach(function(terminalElement) {
+            const terminal = new Terminal();
+            terminal.open(terminalElement);
+            terminal.write('Welcome to Alpha AI Terminal\r\n');
+            terminal.write('$ ');
+        });
+        
+        // Load media for media player panels
+        document.querySelectorAll('.media-player-panel').forEach(function(playerPanel) {
+            const mediaListId = playerPanel.querySelector('.media-list').id;
+            loadMediaList(mediaListId, 'videos');
+            
+            // Media tab switching
+            playerPanel.querySelectorAll('.media-tab').forEach(function(tab) {
+                tab.addEventListener('click', function() {
+                    // Update active tab
+                    playerPanel.querySelectorAll('.media-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Load media for selected type
+                    const mediaType = this.dataset.mediaType;
+                    loadMediaList(mediaListId, mediaType);
+                });
+            });
+            
+            // Media search
+            const searchInput = playerPanel.querySelector('.media-search input');
+            const searchButton = playerPanel.querySelector('.media-search button');
+            
+            searchButton.addEventListener('click', function() {
+                const query = searchInput.value.trim();
+                const activeTab = playerPanel.querySelector('.media-tab.active');
+                const mediaType = activeTab ? activeTab.dataset.mediaType : 'videos';
+                
+                loadMediaList(mediaListId, mediaType, query);
+            });
+            
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchButton.click();
+                }
+            });
+        });
+        
+        // Initialize chat interfaces
+        document.querySelectorAll('.chat-interface').forEach(function(chatInterface) {
+            const panelId = chatInterface.id.replace('chat-', '');
+            const messagesContainer = document.getElementById(`chat-messages-${panelId}`);
+            const inputElement = document.getElementById(`chat-input-${panelId}`);
+            const sendButton = document.getElementById(`chat-send-${panelId}`);
+            
+            // Add welcome message
+            const welcomeMessage = document.createElement('div');
+            welcomeMessage.className = 'chat-message assistant-message';
+            welcomeMessage.innerHTML = `
+                <div class="message-content">
+                    <p>Hello! I'm Alpha AI. How can I help you today?</p>
+                </div>
+                <div class="message-time">${new Date().toLocaleTimeString()}</div>
+            `;
+            messagesContainer.appendChild(welcomeMessage);
+            
+            // Send message function
+            function sendMessage() {
+                const message = inputElement.value.trim();
+                if (!message) return;
+                
+                // Add user message to chat
+                const userMessage = document.createElement('div');
+                userMessage.className = 'chat-message user-message';
+                userMessage.innerHTML = `
+                    <div class="message-content">
+                        <p>${message}</p>
+                    </div>
+                    <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                `;
+                messagesContainer.appendChild(userMessage);
+                
+                // Clear input
+                inputElement.value = '';
+                
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // Send to AI and get response
+                fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        conversation_id: `workspace-${document.querySelector('.workspace-container').dataset.workspaceId}`
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Add AI response to chat
+                    const aiMessage = document.createElement('div');
+                    aiMessage.className = 'chat-message assistant-message';
+                    aiMessage.innerHTML = `
+                        <div class="message-content">
+                            <p>${data.response}</p>
+                        </div>
+                        <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                    `;
+                    messagesContainer.appendChild(aiMessage);
+                    
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    
+                    // Add error message to chat
+                    const errorMessage = document.createElement('div');
+                    errorMessage.className = 'chat-message system-message';
+                    errorMessage.innerHTML = `
+                        <div class="message-content">
+                            <p>Error: Could not send message. Please try again.</p>
+                        </div>
+                        <div class="message-time">${new Date().toLocaleTimeString()}</div>
+                    `;
+                    messagesContainer.appendChild(errorMessage);
+                    
+                    // Scroll to bottom
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                });
+            }
+            
+            // Send button click
+            sendButton.addEventListener('click', sendMessage);
+            
+            // Enter key press
+            inputElement.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        });
+        
+        // Initialize canvases
+        document.querySelectorAll('.canvas-container').forEach(function(canvasContainer) {
+            const canvasId = canvasContainer.querySelector('canvas').id;
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            function resizeCanvas() {
+                canvas.width = canvasContainer.clientWidth;
+                canvas.height = canvasContainer.clientHeight - 40; // Subtract toolbar height
+            }
+            
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Drawing state
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let currentTool = 'brush';
+            let currentColor = '#000000';
+            
+            // Tool selection
+            canvasContainer.querySelectorAll('.canvas-tool').forEach(function(toolButton) {
+                toolButton.addEventListener('click', function() {
+                    currentTool = this.dataset.tool;
+                    canvasContainer.querySelectorAll('.canvas-tool').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // Color picker
+            const colorPicker = canvasContainer.querySelector('input[type="color"]');
+            colorPicker.addEventListener('change', function() {
+                currentColor = this.value;
+            });
+            
+            // Drawing events
+            canvas.addEventListener('mousedown', function(e) {
+                isDrawing = true;
+                [lastX, lastY] = [e.offsetX, e.offsetY];
+            });
+            
+            canvas.addEventListener('mousemove', function(e) {
+                if (!isDrawing) return;
+                
+                if (currentTool === 'brush') {
+                    ctx.strokeStyle = currentColor;
+                    ctx.lineWidth = 5;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.stroke();
+                    
+                    [lastX, lastY] = [e.offsetX, e.offsetY];
+                } else if (currentTool === 'eraser') {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 20;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(lastX, lastY);
+                    ctx.lineTo(e.offsetX, e.offsetY);
+                    ctx.stroke();
+                    
+                    [lastX, lastY] = [e.offsetX, e.offsetY];
+                }
+            });
+            
+            canvas.addEventListener('mouseup', () => isDrawing = false);
+            canvas.addEventListener('mouseout', () => isDrawing = false);
+        });
+        
+        // Panel controls
+        document.querySelectorAll('.panel-control-btn').forEach(function(button) {
+            button.addEventListener('click', function() {
+                const panel = this.closest('.workspace-panel');
+                
+                if (this.classList.contains('panel-minimize-btn')) {
+                    panel.classList.toggle('minimized');
+                } else if (this.classList.contains('panel-maximize-btn')) {
+                    panel.classList.toggle('maximized');
+                } else if (this.classList.contains('panel-close-btn')) {
+                    panel.style.display = 'none';
+                }
+            });
+        });
+        
+        // Change template button
+        document.getElementById('change-template-btn').addEventListener('click', function() {
+            const modal = document.getElementById('template-modal');
+            const templateGrid = document.getElementById('template-grid');
+            
+            // Clear existing templates
+            templateGrid.innerHTML = '';
+            
+            // Load templates
+            fetch('/api/workspace/templates')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.templates) {
+                        Object.entries(data.templates).forEach(([id, template]) => {
+                            const templateCard = document.createElement('div');
+                            templateCard.className = 'template-card';
+                            templateCard.dataset.templateId = id;
+                            
+                            templateCard.innerHTML = `
+                                <h3>${template.name}</h3>
+                                <p>${template.description}</p>
+                                <div class="template-tools">
+                                    ${template.tools.map(tool => `<span class="template-tool">${tool}</span>`).join('')}
+                                </div>
+                            `;
+                            
+                            templateCard.addEventListener('click', function() {
+                                switchWorkspaceTemplate(id);
+                                modal.style.display = 'none';
+                            });
+                            
+                            templateGrid.appendChild(templateCard);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading templates:', error);
+                    templateGrid.innerHTML = '<p class="error-message">Error loading templates</p>';
+                });
+            
+            // Show modal
+            modal.style.display = 'block';
+        });
+        
+        // Close modal button
+        document.querySelector('.modal-close-btn').addEventListener('click', function() {
+            document.getElementById('template-modal').style.display = 'none';
+        });
+        
+        // Close modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('template-modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+        
+        // Save workspace button
+        document.getElementById('save-workspace-btn').addEventListener('click', function() {
+            const workspaceId = document.querySelector('.workspace-container').dataset.workspaceId;
+            
+            // Get current panel sizes and positions
+            const panelSizes = {};
+            document.querySelectorAll('.workspace-panel').forEach(panel => {
+                panelSizes[panel.dataset.panelId] = {
+                    width: panel.style.width || 'auto',
+                    height: panel.style.height || 'auto',
+                    left: panel.style.left || 'auto',
+                    top: panel.style.top || 'auto'
+                };
+            });
+            
+            // Save workspace state
+            fetch('/api/workspace/update', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    workspace_id: workspaceId,
+                    updates: {
+                        state: {
+                            panel_sizes: panelSizes,
+                            active_panel: document.querySelector('.workspace-panel.active')?.dataset.panelId
+                        }
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showStatusMessage('Workspace saved successfully');
+                } else {
+                    showStatusMessage('Error saving workspace', true);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving workspace:', error);
+                showStatusMessage('Error saving workspace', true);
+            });
+        });
+    });
+    
+    // Load media list
+    function loadMediaList(containerId, mediaType, query = '') {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading...</div>';
+        
+        fetch(`/api/media/search?type=${mediaType}&query=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                container.innerHTML = '';
+                
+                if (data.results && data.results.length > 0) {
+                    data.results.forEach(media => {
+                        const mediaItem = document.createElement('div');
+                        mediaItem.className = 'media-item';
+                        
+                        let mediaIcon = 'fa-file';
+                        if (mediaType === 'videos') mediaIcon = 'fa-video';
+                        else if (mediaType === 'audio') mediaIcon = 'fa-music';
+                        else if (mediaType === 'images') mediaIcon = 'fa-image';
+                        else if (mediaType === 'documents') mediaIcon = 'fa-file-alt';
+                        
+                        mediaItem.innerHTML = `
+                            <div class="media-thumbnail">
+                                ${media.thumbnail ? 
+                                    `<img src="${media.thumbnail}" alt="${media.title}">` : 
+                                    `<div class="media-icon"><i class="fas ${mediaIcon}"></i></div>`
+                                }
+                            </div>
+                            <div class="media-info">
+                                <div class="media-title">${media.title}</div>
+                                ${media.duration ? `<div class="media-duration">${formatDuration(media.duration)}</div>` : ''}
+                            </div>
+                        `;
+                        
+                        mediaItem.addEventListener('click', function() {
+                            playMedia(mediaType, media.id);
+                        });
+                        
+                        container.appendChild(mediaItem);
+                    });
+                } else {
+                    container.innerHTML = `<p class="empty-message">No ${mediaType} found</p>`;
+                }
+            })
+            .catch(error => {
+                console.error(`Error loading ${mediaType}:`, error);
+                container.innerHTML = `<p class="error-message">Error loading ${mediaType}</p>`;
+            });
+    }
+    
+    // Format duration
+    function formatDuration(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = Math.floor(seconds % 60);
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+    
+    // Switch workspace template
+    function switchWorkspaceTemplate(templateId) {
+        const workspaceId = document.querySelector('.workspace-container').dataset.workspaceId;
+        
+        fetch('/api/workspace/switch-template', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                workspace_id: workspaceId,
+                template_id: templateId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                showStatusMessage('Workspace template changed. Reloading...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showStatusMessage('Error changing template', true);
+            }
+        })
+        .catch(error => {
+            console.error('Error switching template:', error);
+            showStatusMessage('Error changing template', true);
+        });
+    }
+    
+    // Show status message
+    function showStatusMessage(message, isError = false) {
+        const statusElement = document.getElementById('workspace-status-message');
+        statusElement.textContent = message;
+        statusElement.className = isError ? 'status-error' : 'status-success';
+        
+        // Clear message after 3 seconds
+        setTimeout(() => {
+            statusElement.textContent = 'Ready';
+            statusElement.className = '';
+        }, 3000);
+    }
+</script>
+
+<style>
+    .workspace-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+    
+    .workspace-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 20px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .workspace-title {
+        display: flex;
+        align-items: center;
+    }
+    
+    .workspace-title h1 {
+        margin: 0;
+        font-size: 1.5rem;
+    }
+    
+    .workspace-template-badge {
+        margin-left: 10px;
+        padding: 3px 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+    
+    .workspace-actions {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .workspace-action-btn {
+        padding: 5px 10px;
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .workspace-action-btn:hover {
+        background-color: #f1f3f5;
+    }
+    
+    .workspace-content {
+        flex: 1;
+        display: grid;
+        gap: 5px;
+        padding: 5px;
+        background-color: #e9ecef;
+        overflow: auto;
+    }
+    
+    .workspace-content[data-layout="simple"] {
+        grid-template-columns: 250px 1fr;
+        grid-template-rows: 1fr;
+    }
+    
+    .workspace-content[data-layout="split"] {
+        grid-template-columns: 250px 1fr 250px;
+        grid-template-rows: 1fr 200px;
+    }
+    
+    .workspace-content[data-layout="focused"] {
+        grid-template-columns: 200px 1fr 200px;
+        grid-template-rows: 1fr;
+    }
+    
+    .workspace-content[data-layout="complex"] {
+        grid-template-columns: 250px 1fr 250px;
+        grid-template-rows: 1fr 200px;
+    }
+    
+    .workspace-panel {
+        background-color: #fff;
+        border-radius: 4px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .workspace-panel[data-panel-position="main"] {
+        grid-column: 2;
+        grid-row: 1;
+    }
+    
+    .workspace-panel[data-panel-position="left"] {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+    }
+    
+    .workspace-panel[data-panel-position="right"] {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+    }
+    
+    .workspace-panel[data-panel-position="bottom"] {
+        grid-column: 2;
+        grid-row: 2;
+    }
+    
+    .workspace-panel.minimized .panel-content {
+        display: none;
+    }
+    
+    .workspace-panel.maximized {
+        position: absolute;
+        top: 60px;
+        left: 0;
+        right: 0;
+        bottom: 40px;
+        z-index: 100;
+    }
+    
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 10px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .panel-header h3 {
+        margin: 0;
+        font-size: 1rem;
+    }
+    
+    .panel-controls {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .panel-control-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .panel-control-btn:hover {
+        color: #343a40;
+    }
+    
+    .panel-content {
+        flex: 1;
+        overflow: auto;
+    }
+    
+    .workspace-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 5px 10px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .workspace-tools {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .workspace-tool-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 0.8rem;
+        color: #6c757d;
+    }
+    
+    .workspace-tool-btn:hover {
+        color: #343a40;
+    }
+    
+    .workspace-tool-btn i {
+        font-size: 1.2rem;
+        margin-bottom: 2px;
+    }
+    
+    /* Code editor */
+    .code-editor {
+        height: 100%;
+        width: 100%;
+    }
+    
+    /* Terminal */
+    .terminal {
+        height: 100%;
+        width: 100%;
+        background-color: #1e1e1e;
+        color: #f8f8f8;
+        padding: 5px;
+        font-family: monospace;
+    }
+    
+    /* File explorer */
+    .file-explorer {
+        height: 100%;
+        width: 100%;
+        padding: 5px;
+    }
+    
+    /* Chat interface */
+    .chat-interface {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    
+    .chat-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .chat-message {
+        max-width: 80%;
+        padding: 10px;
+        border-radius: 8px;
+    }
+    
+    .user-message {
+        align-self: flex-end;
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .assistant-message {
+        align-self: flex-start;
+        background-color: #f1f3f5;
+    }
+    
+    .system-message {
+        align-self: center;
+        background-color: #ffc107;
+        color: #343a40;
+    }
+    
+    .message-time {
+        font-size: 0.7rem;
+        margin-top: 5px;
+        opacity: 0.7;
+    }
+    
+    .chat-input-container {
+        display: flex;
+        padding: 10px;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .chat-input {
+        flex: 1;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        resize: none;
+    }
+    
+    .chat-send-btn {
+        margin-left: 10px;
+        padding: 8px 15px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    /* Media player panel */
+    .media-player-panel {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    
+    .media-library {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .media-tabs {
+        display: flex;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .media-tab {
+        padding: 8px 15px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+    }
+    
+    .media-tab.active {
+        border-bottom-color: #007bff;
+        font-weight: bold;
+    }
+    
+    .media-search {
+        display: flex;
+        padding: 10px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .media-search input {
+        flex: 1;
+        padding: 5px;
+        border: 1px solid #ced4da;
+        border-radius: 4px 0 0 4px;
+    }
+    
+    .media-search button {
+        padding: 5px 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 0 4px 4px 0;
+        cursor: pointer;
+    }
+    
+    .media-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+    }
+    
+    .media-item {
+        cursor: pointer;
+        border-radius: 4px;
+        overflow: hidden;
+        transition: transform 0.2s;
+    }
+    
+    .media-item:hover {
+        transform: scale(1.05);
+    }
+    
+    .media-thumbnail {
+        height: 80px;
+        background-color: #f1f3f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .media-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .media-icon {
+        font-size: 2rem;
+        color: #6c757d;
+    }
+    
+    .media-info {
+        padding: 5px;
+        font-size: 0.8rem;
+    }
+    
+    .media-title {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .media-duration {
+        font-size: 0.7rem;
+        color: #6c757d;
+    }
+    
+    /* Canvas */
+    .canvas-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    
+    .canvas-tools {
+        display: flex;
+        padding: 5px;
+        gap: 5px;
+        background-color: #f8f9fa;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .canvas-tool {
+        padding: 5px 10px;
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .canvas-tool.active {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    /* Timeline */
+    .timeline-container {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    
+    .timeline-controls {
+        display: flex;
+        align-items: center;
+        padding: 5px;
+        gap: 10px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .timeline-control {
+        padding: 5px 10px;
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .timeline-time {
+        font-family: monospace;
+        padding: 5px 10px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+    }
+    
+    .timeline-tracks {
+        flex: 1;
+        overflow-y: auto;
+        padding: 10px;
+    }
+    
+    /* Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    .modal-content {
+        background-color: #fff;
+        margin: 10% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 80%;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    
+    .modal-header h2 {
+        margin: 0;
+    }
+    
+    .modal-close-btn {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+    }
+    
+    .template-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    
+    .template-card {
+        padding: 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .template-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .template-card h3 {
+        margin-top: 0;
+    }
+    
+    .template-tools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+    }
+    
+    .template-tool {
+        padding: 3px 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        font-size: 0.8rem;
+    }
+    
+    /* Status messages */
+    .status-success {
+        color: #28a745;
+    }
+    
+    .status-error {
+        color: #dc3545;
+    }
+    
+    /* Loading spinner */
+    .loading-spinner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        color: #6c757d;
+    }
+    
+    .loading-spinner i {
+        margin-right: 10px;
+    }
+    
+    /* Empty and error messages */
+    .empty-message, .error-message {
+        padding: 20px;
+        text-align: center;
+        color: #6c757d;
+    }
+    
+    .error-message {
+        color: #dc3545;
+    }
+</style>
+{% endblock %}

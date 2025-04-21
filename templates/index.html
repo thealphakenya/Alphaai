@@ -1,0 +1,189 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Welcome to Alpha AI</h1>
+        <p>Your intelligent assistant with persistent memory and adaptive workspace</p>
+    </div>
+    
+    <div class="dashboard-grid">
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h2><i class="fas fa-brain"></i> AI Training</h2>
+            </div>
+            <div class="card-content">
+                {% include 'training_progress.html' %}
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h2><i class="fas fa-history"></i> Recent Conversations</h2>
+            </div>
+            <div class="card-content">
+                <div class="conversations-list" id="recent-conversations">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/chat" class="view-all-link">View All Conversations</a>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h2><i class="fas fa-project-diagram"></i> Projects</h2>
+            </div>
+            <div class="card-content">
+                <div class="projects-list" id="recent-projects">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/projects" class="view-all-link">View All Projects</a>
+                <button class="new-project-btn">New Project</button>
+            </div>
+        </div>
+        
+        <div class="dashboard-card">
+            <div class="card-header">
+                <h2><i class="fas fa-photo-video"></i> Media Library</h2>
+            </div>
+            <div class="card-content">
+                <div class="media-grid" id="recent-media">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i> Loading...
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/media" class="view-all-link">View All Media</a>
+                <button class="upload-media-btn">Upload Media</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load recent conversations
+    fetch('/api/memory/search?limit=5')
+        .then(response => response.json())
+        .then(data => {
+            const conversationsContainer = document.getElementById('recent-conversations');
+            conversationsContainer.innerHTML = '';
+            
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(conversation => {
+                    const conversationItem = document.createElement('div');
+                    conversationItem.className = 'conversation-item';
+                    conversationItem.innerHTML = `
+                        <div class="conversation-preview">
+                            <p>${conversation.preview}...</p>
+                        </div>
+                        <div class="conversation-meta">
+                            <span class="conversation-date">${new Date(conversation.timestamp).toLocaleString()}</span>
+                            <a href="/chat?id=${conversation.id}" class="conversation-link">Continue</a>
+                        </div>
+                    `;
+                    conversationsContainer.appendChild(conversationItem);
+                });
+            } else {
+                conversationsContainer.innerHTML = '<p class="empty-message">No recent conversations</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading conversations:', error);
+            document.getElementById('recent-conversations').innerHTML = 
+                '<p class="error-message">Error loading conversations</p>';
+        });
+    
+    // Load recent projects
+    fetch('/api/projects/recent?limit=5')
+        .then(response => response.json())
+        .then(data => {
+            const projectsContainer = document.getElementById('recent-projects');
+            projectsContainer.innerHTML = '';
+            
+            if (data.projects && data.projects.length > 0) {
+                data.projects.forEach(project => {
+                    const projectItem = document.createElement('div');
+                    projectItem.className = 'project-item';
+                    projectItem.innerHTML = `
+                        <div class="project-info">
+                            <h3 class="project-title">${project.name}</h3>
+                            <p class="project-description">${project.description || 'No description'}</p>
+                        </div>
+                        <div class="project-meta">
+                            <span class="project-date">Last updated: ${new Date(project.last_updated).toLocaleString()}</span>
+                            <a href="/workspace?id=${project.id}" class="project-link">Open</a>
+                        </div>
+                    `;
+                    projectsContainer.appendChild(projectItem);
+                });
+            } else {
+                projectsContainer.innerHTML = '<p class="empty-message">No recent projects</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading projects:', error);
+            document.getElementById('recent-projects').innerHTML = 
+                '<p class="error-message">Error loading projects</p>';
+        });
+    
+    // Load recent media
+    fetch('/api/media/search?limit=6')
+        .then(response => response.json())
+        .then(data => {
+            const mediaContainer = document.getElementById('recent-media');
+            mediaContainer.innerHTML = '';
+            
+            if (data.results && data.results.length > 0) {
+                data.results.forEach(media => {
+                    const mediaItem = document.createElement('div');
+                    mediaItem.className = 'media-item';
+                    
+                    let mediaIcon = 'fa-file';
+                    if (media.type === 'videos') mediaIcon = 'fa-video';
+                    else if (media.type === 'audio') mediaIcon = 'fa-music';
+                    else if (media.type === 'images') mediaIcon = 'fa-image';
+                    else if (media.type === 'documents') mediaIcon = 'fa-file-alt';
+                    
+                    mediaItem.innerHTML = `
+                        <div class="media-thumbnail" onclick="playMedia('${media.type}', '${media.id}')">
+                            ${media.thumbnail ? 
+                                `<img src="${media.thumbnail}" alt="${media.title}">` : 
+                                `<div class="media-icon"><i class="fas ${mediaIcon}"></i></div>`
+                            }
+                        </div>
+                        <div class="media-title">${media.title}</div>
+                    `;
+                    mediaContainer.appendChild(mediaItem);
+                });
+            } else {
+                mediaContainer.innerHTML = '<p class="empty-message">No media files</p>';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading media:', error);
+            document.getElementById('recent-media').innerHTML = 
+                '<p class="error-message">Error loading media</p>';
+        });
+    
+    // New project button
+    document.querySelector('.new-project-btn').addEventListener('click', function() {
+        window.location.href = '/projects/new';
+    });
+    
+    // Upload media button
+    document.querySelector('.upload-media-btn').addEventListener('click', function() {
+        window.location.href = '/media/upload';
+    });
+</script>
+{% endblock %}
