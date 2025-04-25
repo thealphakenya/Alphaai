@@ -1,6 +1,11 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"  # or "pip", "maven", etc.
-    directory: "/"            # location of your package file
+  - package-ecosystem: "pip"
+    directory: "/"  # Change if your requirements.txt is in a subfolder
+    schedule:
+      interval: "daily"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
     schedule:
       interval: "daily"
