@@ -21,9 +21,11 @@ jobs:
         run: python3 scripts/modify_readme.py
 
       - name: Commit and push changes
+        env:
+          TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "GitHub Action"
+          git config user.email "action@github.com"
           git add .
           git commit -m "Auto-update by GitHub Action" || echo "No changes to commit"
-          git push
+          git push https://x-access-token:${TOKEN}@github.com/${{ github.repository }} HEAD:main
