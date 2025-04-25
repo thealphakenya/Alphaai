@@ -1,13 +1,14 @@
 name: Auto Update with Script
 
 on:
-  workflow_dispatch:  # You can trigger it manually from the Actions tab
+  workflow_dispatch:  # Manual trigger
   schedule:
     - cron: "0 6 * * *"  # Daily at 6AM UTC
 
 jobs:
   update-files:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
